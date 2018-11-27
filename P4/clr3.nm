@@ -1,0 +1,79 @@
+// randomized dining philosophers [LR81]
+// three philosophers
+
+mdp
+
+// formulae 
+// left fork free (left neighbour is philosopher 2)
+formula lfree = (p2>=0 & p2<=4) | p2=6 | p2=10;
+// right fork free (left neighbour is philosopher 3)
+formula rfree = (p3>=0 & p3<=3) | p3=5 | p3=7 | p3=11;
+
+// formulae
+// a philosopher will not pick up his/her neighbour’s fork (when it has no forks) 
+// if that neighbour is trying to eat and has not eaten since the philosopher's most recent meal. 
+// left fork be courteous (left neighbour is philosopher 2)
+formula cl = !right_signal2 | fork1_last = 0 | fork1_last = 1;
+
+// right fork be courteous (left neighbour is philosopher 3)
+formula cr = !left_signal3 | fork3_last = 0 | fork3_last = 2;
+
+const int NEUTRAL = 0;
+const int LEFT = 1;
+const int RIGHT = 2;
+
+global fork1_last: [0..2] init 0;
+global fork2_last: [0..2] init 0;
+global fork3_last: [0..2] init 0;
+
+module phil1
+	
+	left_signal1 : bool init false; 
+	right_signal1 : bool init false; 
+
+	p1: [0..11];
+
+	[] p1=0 -> (p1'=1) & (left_signal1'=true) & (right_signal1'=true); // trying
+	[] p1=1 -> 0.5 : (p1'=2) + 0.5 : (p1'=3); // draw randomly
+	[] p1=2 &  lfree & cl-> (p1'=4); // pick up left
+	[] p1=3 &  rfree & cr-> (p1'=5); // pick up right
+	[] p1=4 &  rfree -> (p1'=8); // pick up right (got left)
+	[] p1=4 & !rfree -> (p1'=6); // right not free (got left)
+	[] p1=5 &  lfree -> (p1'=8); // pick up left (got right)
+	[] p1=5 & !lfree -> (p1'=7); // left not free (got right)
+	[] p1=6  -> (p1'=1); // put down left
+	[] p1=7  -> (p1'=1); // put down right
+	[] p1=8  -> (p1'=9); // move to eating (got forks)
+	[] p1=9  -> (p1'=10) & (left_signal1'=false) & (right_signal1'=false) &(fork1_last'=2) & (fork3_last'=1); // finished eating and put down left 
+	[] p1=9  -> (p1'=11) & (left_signal1'=false) & (right_signal1'=false) &(fork1_last'=2) & (fork3_last'=1); // finished eating and put down right
+	[] p1=10 -> (p1'=0); // put down right and return to think
+	[] p1=11 -> (p1'=0); // put down left and return to think
+
+endmodule
+
+// construct further modules through renaming
+module phil2 = phil1 [ fork1_last = fork2_last, fork3_last = fork1_last, left_signal1 =left_signal2, right_signal1=right_signal2, left_signal3 =left_signal1, right_signal2=right_signal3, p1=p2, p2=p3, p3=p1 ] endmodule
+module phil3 = phil1 [ fork1_last = fork3_last, fork3_last = fork2_last, left_signal1 =left_signal3, right_signal1=right_signal3, left_signal3 =left_signal2, right_signal2=right_signal1, p1=p3, p2=p1, p3=p2 ] endmodule
+
+// labels
+
+// a philosopher is hungry
+label "hungry" = ((p1>0)&(p1<8))|((p2>0)&(p2<8))|((p3>0)&(p3<8)); 
+ // a philosopher is eating
+label "eat" = ((p1>=8)&(p1<=9))|((p2>=8)&(p2<=9))|((p3>=8)&(p3<=9));
+// philosopher 1 is hungry
+label "hungry1" = (p1>0)&(p1<8);
+// philosopher 2 is hungry
+label "hungry2" = (p2>0)&(p2<8);
+// philosopher 3 is hungry
+label "hungry3" = (p3>0)&(p3<8);
+ // philosopher 1 is eating
+label "eat1" = (p1>=8)&(p1<=9);
+ // philosopher 2 is eating
+label "eat2" = (p2>=8)&(p2<=9);
+ // philosopher 3 is eating
+label "eat3" = (p3>=8)&(p3<=9);
+
+rewards
+    true : 1;
+endrewards
