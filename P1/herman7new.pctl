@@ -1,0 +1,8 @@
+const int k;
+
+label "k_tokens" = num_tokens=k;
+label "stable" = num_tokens=1;
+
+// maximum expected time to reach a stable state (for all k-token configurations)
+R=? [ F "stable" {"k_tokens"}{min} ]
+
